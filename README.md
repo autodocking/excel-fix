@@ -1,4 +1,4 @@
-# excel-fix
+# 清除Excel中的自定义样式
 
 通过 JSZip 解压 xlsx 文件，然后删除 styles.xml 中的所有自定义样式。但是最近遇到几个文件，不光是 styles.xml 中有多余内容，所以计划重新做一下这个。
 
