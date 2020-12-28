@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link type="text/css" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap/dist/css/bootstrap.min.css" />
+  <link type="text/css" rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap-vue@latest/dist/bootstrap-vue.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/vue@latest/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap-vue@latest/dist/bootstrap-vue.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap-vue@latest/dist/bootstrap-vue-icons.min.js"></script>
+  <link rel="stylesheet" href="style.css">
+  <title>清除Excel中的自定义样式</title>
+</head>
+
+<body>
+  <!-- 很奇怪，非要 v-on:drop.prevent v-on:dragover.prevent 一起写才可以阻止默认拖入事件 -->
+  <div id="app" class="container app" v-on:drop.prevent v-on:dragover.prevent>
+
+    <h3>清除Excel中的自定义样式</h3>
+    <p>
+      该页面可以帮助你将Excel文件的所有自定义样式删除，你还需要将新生成的文件在Excel中打开并重新保存一次，来彻底清除残留。
+    </p>
+
+    <!-- 文件载入区域 -->
+    <div>
+      <b-form-group label="选择文件：" label-for="file-select" label-cols-sm="2">
+        <b-form-file multiple placeholder="未选择任何文件" drop-placeholder="将文件拖入这里" browse-text="浏览" id="file-select">
+          <div slot="file-name" slot-scope="{ names }">
+            {{ names[0] }}<span v-if="names.length > 1"> 等 {{ names.length }} 个文件
+            </span>
+          </div>
+        </b-form-file>
+      </b-form-group>
+
+      <!-- 在本地运行时，input 内不支持拖放，所以另外写一个 -->
+      <b-form-group label="拖入文件：" label-cols-sm="2">
+        <b-card :class="{'bg-secondary ' : isDragIn, 'text-white' : isDragIn}">
+          <div class="text-center" v-on:drop="onDrop" v-on:dragenter="onDragenter" v-on:dragleave="onDragleave" style="height: 100px; line-height: 100px;">
+            将文件拖入这里
+          </div>
+        </b-card>
+      </b-form-group>
+
+
+    </div>
+
+    <!-- 处理记录区域 -->
+    <div>处理记录：</div>
+
+    <!-- 警告区域 -->
+    <div>
+      <b-alert variant="danger" dismissible>
+        {{alert}}
+      </b-alert>
+    </div>
+
+
+    <!-- 详细说明区域 -->
+    <div>
+      <br>
+      <br>
+      <b-link v-b-toggle.collapse-1>点击查看详细说明 ▼</b-link>
+      <b-collapse id="collapse-1" class="mt-2">
+        <b-card>
+          <div>
+            <br>
+            <img src="../old-version/sample.png" alt="示例图片">
+            <br>
+            <br>
+            <ul class="list-group">
+              <li class="list-group-item">
+                多余的自定义样式，是通过不当的新建文件方式或是在合并Excel文件时，从一个文件带入另一个文件中，就像病毒一样，在公司的各种文件中传播，造成文件体积庞大、打开缓慢、不便于邮件传送、合并时易出错等等问题。该页面可以帮助你直接清除Excel中的所有自定义样式。
+              </li>
+              <li class="list-group-item">该页面的所有计算都是在本地完成的，不会上传你的文件。</li>
+              <li class="list-group-item">文件需要是xlsx格式，如果不是，请先在Excel中另存为xlsx格式。</li>
+              <li class="list-group-item">处理过程：<br>
+                1、使用zip解压文件；<br>
+                2、删除 xl 文件夹下 styles.xml 文件中的 &lt;cellStyles&gt;...&lt;/cellStyles&gt; 标签内的所有内容；<br>
+                3、重新用zip打包成xlsx文件，你将以“下载”的方式获得新文件；<br>
+                4、在Excel中打开并重新保存，Excel会自动清除 &lt;cellStyleXfs&gt;...&lt;/cellStyleXfs&gt; 标签内多余的内容。
+              </li>
+              <li class="list-group-item">在Chrome浏览器中可以同时处理多个文件。
+                <span class="text-muted">其他浏览器例如IE不支持同时下载多个文件。</span>
+              </li>
+              <li class="list-group-item">这里提供一个
+                <a href="../old-version/sample.xlsx">示例文件</a>
+                ，其中包含了将近5万个无效的自定义样式，经过该页面处理，并在Excel中打开并重新保存后，可以从600kb缩小到50kb以下。
+              </li>
+              <li class="list-group-item">最后，希望大家养成好习惯：<br>
+                1、通过右键菜单来新建Excel文件，不要以删除所有sheet的方式，把旧文件当做新文件使用；<br>
+                2、使用Office 2016以上版本的Excel来合并文件，可以避免传递无用的自定义样式。
+              </li>
+            </ul>
+          </div>
+        </b-card>
+      </b-collapse>
+    </div>
+
+  </div>
+
+  <script src="./main.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>清除Excel中的自定义样式</title>
+    <script type="text/javascript" src="./jquery.min.js"></script>
+    <script type="text/javascript" src="./jszip.min.js"></script>
+    <script type="text/javascript" src="./FileSaver.min.js"></script>
+    <link rel="stylesheet" href="./bootstrap.min.css">
+    <script src="./bootstrap.min.js"></script>
+
+    <style>
+        html {
+            height: 100%;
+            overflow-y: scroll;
+        }
+        body {
+            min-height: 100%;
+        }
+        .drop-zone {
+            height: 10em;
+            border-width: 3px;
+            margin: 1em 0;
+            color: #ccc;
+            border-style: dashed;
+            border-radius: .5em;
+            border-color: #ccc;
+            line-height: 10em;
+            text-align: center;
+            font-size: 1.5em;
+        }
+        .drag-over {
+            border-color: #555;
+            color: #555;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h3>清除Excel中的自定义样式</h3>
+        <p>
+            该页面可以帮助你将Excel文件的所有自定义样式删除，你还需要将新生成的文件在Excel中打开并重新保存一次，来彻底清除它们。
+        </p>
+
+        <input type="file" id="file" name="file" multiple>
+
+        <div class="drop-zone" id="dropZone">
+            将文件拖拽到这里
+        </div>
+        <div id="result_block" class="hidden">
+            <h4>处理记录 :</h4>
+            <div id="result"></div>
+        </div>
+
+        <button type="button" class="btn btn-link" style="padding: 0;" data-toggle="collapse"
+            data-target="#instruction">
+            点击查看详细说明
+        </button>
+        <div id="instruction" class="collapse">
+            <br>
+            <img src="./sample.png" alt="示例图片" class="img-rounded img-responsive">
+            <br>
+            <ul class="list-group">
+                <li class="list-group-item">
+                    多余的自定义样式，是通过不当的新建文件方式或是在合并Excel文件时，从一个文件带入另一个文件中，就像病毒一样，在公司的各种文件中传播，造成文件体积庞大、打开缓慢、不便于邮件传送、合并时易出错等等问题。该页面可以帮助你直接清除Excel中的所有自定义样式。
+                </li>
+                <li class="list-group-item">该页面的所有计算都是在本地完成的，不会上传你的文件。</li>
+                <li class="list-group-item">文件需要是xlsx格式，如果不是，请先在Excel中另存为xlsx格式。</li>
+                <li class="list-group-item">处理过程：<br>
+                    1、使用zip解压文件；<br>
+                    2、删除 xl 文件夹下 styles.xml 文件中的 &lt;cellStyles&gt;...&lt;/cellStyles&gt; 标签内的所有内容；<br>
+                    3、重新用zip打包成xlsx文件，你将以“下载”的方式获得新文件；<br>
+                    4、在Excel中打开并重新保存，Excel会自动清除 &lt;cellStyleXfs&gt;...&lt;/cellStyleXfs&gt; 标签内多余的内容。
+                </li>
+                <li class="list-group-item">在Chrome浏览器中可以同时处理多个文件。
+                    <span class="text-muted">其他浏览器例如IE不支持同时下载多个文件。</span>
+                </li>
+                <li class="list-group-item">这里提供一个
+                    <a href="./sample.xlsx">示例文件</a>
+                    ，其中包含了将近5万个无效的自定义样式，经过该页面处理，并在Excel中打开并重新保存后，可以从600kb缩小到50kb以下。
+                </li>
+                <li class="list-group-item">最后，希望大家养成好习惯：<br>
+                    1、通过右键菜单来新建Excel文件，不要以删除所有sheet的方式，把旧文件当做新文件使用；<br>
+                    2、使用Office 2016以上版本的Excel来合并文件，可以避免传递无用的自定义样式。
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <script type="text/javascript" src="./main.js"></script>
+</body>
+
+</html>

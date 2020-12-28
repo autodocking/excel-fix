@@ -1,0 +1,14 @@
+/* 固定页面高度为满屏，避免拖放时直接下载文件 */
+
+html {
+    height: 100%;
+    overflow-y: scroll;
+}
+
+body {
+    height: 100%;
+}
+
+.app {
+    min-height: 100%;
+}
