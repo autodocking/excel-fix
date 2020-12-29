@@ -1,0 +1,19 @@
+{
+  "name": "excel-fix",
+  "version": "1.0.0",
+  "description": "清除excel文件中多余的自定义样式。",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/autodocking/excel-fix.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/autodocking/excel-fix/issues"
+  },
+  "homepage": "https://github.com/autodocking/excel-fix#readme"
+}

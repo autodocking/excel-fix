@@ -1,14 +1,19 @@
-/* 固定页面高度为满屏，避免拖放时直接下载文件 */
+/* 始终显示右侧滚动槽*/
 
 html {
-    height: 100%;
     overflow-y: scroll;
 }
 
-body {
-    height: 100%;
-}
+
+/* 让 div.app 层占满屏幕 */
 
 .app {
     min-height: 100%;
+    user-select: none;
+}
+
+/* 避免页面加载时折叠内容的闪现 */
+
+[v-cloak] {
+    display: none
 }
