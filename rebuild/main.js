@@ -8,14 +8,20 @@ var app = new Vue({
         startTime: null,
         logs: {},
         step: 0,
-        totalStep: 5,
-        showMultipleFileWarning: false
+        totalStep: 7,
+        showMultipleFileWarning: false,
+        selected: ['styles', 'workbook'],
+        options: [
+            { text: '清除自定义样式', value: 'styles' },
+            { text: '清除命名区域', value: 'workbook' },
+            { text: 'PNG→JPG 图片批量转换（未完成）', value: 'png' }
+        ]
     },
     methods: {
-        onDragenter: function (e) {
+        onDragenter: function () {
             this.isDragIn = true;
         },
-        onDragleave: function (e) {
+        onDragleave: function () {
             this.isDragIn = false;
         },
         onGetFiles: function (e) {
@@ -31,7 +37,7 @@ var app = new Vue({
             this.logs = {};
             this.alerts = {};
             this.step = 0;
-            this.totalStep = (files.length) * 5;
+            this.totalStep = (files.length) * 7;
             if (files.length > 1) {
                 this.showMultipleFileWarning = true;
             } else {
@@ -39,10 +45,11 @@ var app = new Vue({
             }
             // 所有文件并行处理
             for (var i = 0; i < files.length; i++) {
-                handleFile(files[i], i);
+                handleFile(files[i]);
             }
         },
         log: function (key, value, variant) {
+            console.log(value)
             if (!this.logs[key]) {
                 this.logs[key] = { step: 0 }
             }
@@ -50,59 +57,84 @@ var app = new Vue({
             this.logs[key].timePast = timePast;
             this.logs[key].value = value;
             this.logs[key].variant = variant;
-            // 由于vue限制，对 logs 深层数值的多次更新，视图只显示初始化之后的第一次更新
-            // 因此通过更新处于数据最外层的进度条 step，使深层日志的每次更新也都能被立即显示
+            // 由于vue限制，对于 logs 深层数值的多次更新，视图只显示初始化之后的第一次更新，
+            // 因此通过更新位于数据顶层的进度条，即 data 里的 step，使深层日志的每次更新也都能被立即显示出来。
             this.step += 1
-        },
+        }
 
     }
 })
 
 // 处理文件
-function handleFile(f, i) {
+async function handleFile(f) {
+    var options = {}
+    app.selected.forEach(element => {
+        options[element] = true;
+    });
+    console.log(options)
+    app.log(f.name, '读取文件。');
+    var zip = await JSZip.loadAsync(f).catch(function () {
+        var msg = '解压错误，请确认文件是 xlsx 格式，如果是旧版本的 xls 文件，请先在 Excel 中另存为 xlsx 格式。';
+        app.log(f.name, msg, 'text-danger')
+        app.step += 5;
+    });
 
-    app.log(f.name, '读取文件。')
+    if (!zip) { return }
 
-    JSZip.loadAsync(f)
-        .then(function (zip) {
+    if (options.styles) {
+        if (!(zip.file('xl/styles.xml'))) {
+            var msg = '文件中未找到 /xl/styles.xml。'
+            app.log(f.name, msg, 'text-danger');
+            app.step += 5;
+            return
+        }
+        // 读取 styles.xml 文件
+        app.log(f.name, '读取 styles.xml 文件。');
+        var stylesXML = await zip.file('xl/styles.xml').async('string');
+        // 清除自定义样式
+        app.log(f.name, '清除自定义样式。')
+        stylesXML = stylesXML.replace(/<numFmts.*<\/numFmts>/, '');
+        stylesXML = stylesXML.replace(/<cellStyleXfs.*<\/cellStyleXfs>/, '');
+        stylesXML = stylesXML.replace(/<cellStyles.*<\/cellStyles>/, '');
+        // 修改后的文件写入zip
+        zip.file('xl/styles.xml', stylesXML);
+    } else {
+        app.step += 2;
+    }
 
-            app.log(f.name, '解压文件。')
-
-            if (!(zip.file('xl/styles.xml'))) {
-                var msg = '文件已解压，但是未找到 /xl/styles.xml，这可能不是一个 Excel 文件。'
-                // app.log(f.name, msg)
-                app.log(f.name, msg, 'text-danger');
-                app.step += 2;
-                return;
-            }
-            zip.file('xl/styles.xml').async('string').then(function (temp) {
-                // 清除自定义样式
-                app.log(f.name, '清除自定义样式。')
-                temp = temp.replace(/<numFmts.*<\/numFmts>/, '');
-                temp = temp.replace(/<cellStyleXfs.*<\/cellStyleXfs>/, '');
-                temp = temp.replace(/<cellStyles.*<\/cellStyles>/, '');
-                // 修改后的文件写入zip
-                zip.file('xl/styles.xml', temp);
-
-                app.log(f.name, '重新压缩文件。');
-                zip.generateAsync({
-                    type: 'blob',
-                    compression: 'DEFLATE',
-                    compressionOptions: { level: 6 }
-                }).then(function (blob) {
-                    // 输出到FileSaver.min.js
-                    saveAs(blob, f.name);
-                    app.log(f.name, '√ 完成！', 'text-success');
-                });
-            });
-        }, function (e) {
-            var msg = '解压错误，请确认文件是 xlsx 格式，如果是旧版本的 xls 文件，请先在 Excel 中另存为 xlsx 格式。';
-            app.log(f.name, msg, 'text-danger')
+    if (options.workbook) {
+        if (!(zip.file('xl/workbook.xml'))) {
+            var msg = '文件中未找到 /xl/workbook.xml。'
+            app.log(f.name, msg, 'text-danger');
             app.step += 3;
-        });
+            return
+        }
+        // 读取 workbook.xml 文件
+        app.log(f.name, '读取 workbook.xml 文件。');
+        var workbookXML = await zip.file('xl/workbook.xml').async('string');
+        // 清除自定义样式
+        app.log(f.name, '清除命名区域。')
+        workbookXML = workbookXML.replace(/<definedNames.*<\/definedNames>/, '');
+        // 修改后的文件写入zip
+        zip.file('xl/workbook.xml', workbookXML);
+    } else {
+        app.step += 2;
+    }
+
+    // 重新打包
+    app.log(f.name, '重新压缩文件。');
+    zip.generateAsync({
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 }
+    }).then(function (blob) {
+        // 输出到FileSaver.min.js
+        saveAs(blob, f.name);
+        var msg = (f.size / 1024).toFixed(1) + 'KB → ' + (blob.size / 1024).toFixed(1) + 'KB，压缩比例：' + (100 - blob.size / f.size * 100).toFixed(1) + '%。'
+        app.log(f.name, '√ 完成！' + msg, 'text-success');
+    });
 
 }
-
 
 // 获取 00:00:00 格式时间
 function getHHMMSS(t) {

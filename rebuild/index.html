@@ -19,17 +19,19 @@
 
 <body class="h-100">
 
-
   <!-- 很奇怪，非要 v-on:drop.prevent v-on:dragover.prevent 一起写才可以阻止默认拖入事件，本来想设在 body 上的，但是 vue 不允许在 body 标签上绑定操作 -->
   <div id="app" class="app" @drop.prevent @dragover.prevent>
     <div class="container pt-3 pb-5">
+
       <!-- 警告区域 -->
       <div class="">
-        <b-alert :show="showMultipleFileWarning" dismissible fade variant="warning">你选择了多个文件，请注意允许浏览器同时下载多个文件。</b-alert>
+        <b-alert :show="showMultipleFileWarning" dismissible fade variant="warning">你选择了多个文件，请注意允许浏览器
+          <span class="text-danger">同时下载多个文件</span>。
+        </b-alert>
       </div>
       <h3>清除Excel中的自定义样式</h3>
       <p>
-        这个页面可以帮助你将 Excel 文件的所有自定义样式删除。
+        这个页面可以帮助你将 Excel 文件的所有自定义样式清除，支持同时处理多个文件。
       </p>
 
       <!-- 文件载入区域 -->
@@ -42,21 +44,28 @@
             </div>
           </b-form-file>
         </b-form-group>
-
-        <!-- html 在本地运行时，上面的 input 不支持拖放，所以另外写一个 -->
+        <!-- html 在本地运行时，上面的 input 不支持拖放，所以另外写一个拖放区域 -->
         <b-form-group label="拖入文件：" label-cols-sm="2">
-          <b-card class="text-secondary" :class="{'bg-secondary ' : isDragIn, 'text-light' : isDragIn}">
+          <b-card class="text-secondary" :class="{'bg-secondary': isDragIn, 'text-light': isDragIn}">
             <div class="text-center" @drop="onGetFiles" @dragenter="onDragenter" @dragleave="onDragleave"
               style="height: 120px; line-height: 120px; font-size: x-large;">
               将文件拖入这里
             </div>
           </b-card>
         </b-form-group>
-
-
       </div>
 
-      <!-- 处理记录区域 -->
+
+      <!-- 选项区域 -->
+      <div>
+        <b-form-group label="处理选项：" v-slot="{ ariaDescribedby }" label-cols-sm="2">
+          <b-form-checkbox-group id="checkbox-group-1" v-model="selected" :options="options"
+            :aria-describedby="ariaDescribedby" name="flavour-1"></b-form-checkbox-group>
+        </b-form-group>
+      </div>
+
+
+      <!-- 处理进度区域 -->
       <div>
         <b-form-group label="处理进度：" label-cols-sm="2">
           <!-- 进度条 -->
@@ -68,47 +77,45 @@
               <b-badge variant="info" class="mr-3">{{ log.timePast }}</b-badge>{{ log.value }}
             </div>
           </b-card>
-
-
         </b-form-group>
 
-
-
       </div>
-
 
       <!-- 详细说明区域 -->
       <div v-cloak class="mt-5">
         <b-link v-b-toggle.collapse-description>点击查看详细说明 ▼</b-link>
         <b-collapse id="collapse-description">
-          <b-card>
-            <div>
-              <b-img src="../old-version/sample.png" alt="示例图片" fluid-grow></b-img>
-              <ul class="list-group">
-                <li class="list-group-item">
-                  多余的自定义样式，是通过不当的新建文件方式或是在合并Excel文件时，从一个文件带入另一个文件中，就像病毒一样，在公司的各种文件中传播，造成文件体积庞大、打开缓慢、不便于邮件传送、合并时易出错等等问题。该页面可以帮助你直接清除Excel中的所有自定义样式。
-                </li>
-                <li class="list-group-item">该页面的所有计算都是在本地完成的，不会上传你的文件。</li>
-                <li class="list-group-item">文件需要是xlsx格式，如果不是，请先在Excel中另存为xlsx格式。</li>
-                <li class="list-group-item">处理过程：<br>
-                  1、使用zip解压文件；<br>
-                  2、删除 xl 文件夹下 styles.xml 文件中的 &lt;cellStyles&gt;...&lt;/cellStyles&gt; 标签内的所有内容；<br>
-                  3、重新用zip打包成xlsx文件，你将以“下载”的方式获得新文件；<br>
-                  4、在Excel中打开并重新保存，Excel会自动清除 &lt;cellStyleXfs&gt;...&lt;/cellStyleXfs&gt; 标签内多余的内容。
-                </li>
-                <li class="list-group-item">在Chrome浏览器中可以同时处理多个文件。
-                  <span class="text-muted">其他浏览器例如IE不支持同时下载多个文件。</span>
-                </li>
-                <li class="list-group-item">这里提供一个
-                  <a href="../old-version/sample.xlsx">示例文件</a>
-                  ，其中包含了将近5万个无效的自定义样式，经过该页面处理，并在Excel中打开并重新保存后，可以从600kb缩小到50kb以下。
-                </li>
-                <li class="list-group-item">最后，希望大家养成好习惯：<br>
-                  1、通过右键菜单来新建Excel文件，不要以删除所有sheet的方式，把旧文件当做新文件使用；<br>
-                  2、使用Office 2016以上版本的Excel来合并文件，可以避免传递无用的自定义样式。
-                </li>
-              </ul>
-            </div>
+          <b-card class="mt-3">
+            <b-img rounded src="../old-version/sample.png" alt="示例图片" fluid-grow></b-img>
+            <b-list-group class="mt-3">
+              <b-list-group-item>
+                说明：<br>
+                1、多余的自定义样式，主要是在合并 Excel 文件时产生的，从一个文件带入另一个文件中，就像病毒一样。<br>
+                2、这些样式可能来自于第三方软件生成的工作表，因命名不规范等原因不能被 Excel 自动清除。<br>
+                3、每次合并工作表都可能造成这些样式的数量翻倍。<br>
+                4、当样式数量大于 2<sup>16</sup> 也就是 65536 个时，就会因为单元格格式太多，无法继续编辑。<br>
+                5、该页面的所有计算都是在本地完成的，不会上传你的文件。<br>
+                6、文件需要是 xlsx 格式，如果是早期版本的 xls 文件，请先在 Excel 中另存为 xlsx 格式。<br>
+                7、在 Chrome 浏览器中可以同时处理多个文件，其他浏览器例如 IE 不支持同时下载多个文件，只能一个一个处理。
+              </b-list-group-item>
+              <b-list-group-item>
+                自动处理过程：<br>
+                1、使用 zip 解压文件。<br>
+                2、删除 xl 文件夹下 styles.xml 等文件中的 &lt;cellStyles&gt;...&lt;/cellStyles&gt; 等标签内的所有内容。<br>
+                3、重新用 zip 打包成 xlsx 文件，以【下载】的方式返回新文件。<br>
+              </b-list-group-item>
+              <b-list-group-item>
+                这里提供两个示例文件：<br>
+                <a href="./sample/单元格格式过多 无法编辑 790KB.xlsx">1、单元格格式过多 无法编辑 790KB.xlsx</a><br>
+                <a href="./sample/命名区域过多 打开超级慢 1.15MB.xlsx">2、命名区域过多 打开超级慢 1.15MB.xlsx</a><br>
+                两个都是空文件，但都特别大，打开也特别慢，经过该页面处理，可以缩小到 50kb 以下。
+              </b-list-group-item>
+              <b-list-group-item>
+                最后，希望大家养成好习惯：<br>
+                1、通过右键菜单来新建Excel文件，不要以删除所有sheet的方式，把旧文件当做新文件使用。<br>
+                2、使用 Office 2016 以上版本的 Excel 来合并文件，可以避免传递无用的自定义样式。
+              </b-list-group-item>
+            </b-list-group>
           </b-card>
         </b-collapse>
       </div>
