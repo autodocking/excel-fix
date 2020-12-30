@@ -5,26 +5,31 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <link type="text/css" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap/dist/css/bootstrap.min.css" />
-
   <link type="text/css" rel="stylesheet"
     href="https://cdn.jsdelivr.net/npm/bootstrap-vue@latest/dist/bootstrap-vue.min.css" />
   <!-- <script src="//polyfill.io/v3/polyfill.min.js?features=es2015%2CIntersectionObserver" crossorigin="anonymous"></script> -->
   <script src="https://cdn.jsdelivr.net/npm/vue@latest/dist/vue.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap-vue@latest/dist/bootstrap-vue.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap-vue@latest/dist/bootstrap-vue-icons.min.js"></script>
-  <script type="text/javascript" src="../old-version/jszip.min.js"></script>
-  <script type="text/javascript" src="../old-version/FileSaver.min.js"></script>
+  <script type="text/javascript" src="./jszip.min.js"></script>
+  <script type="text/javascript" src="./FileSaver.min.js"></script>
   <link rel="stylesheet" href="style.css">
   <title>清除Excel中的自定义样式</title>
 </head>
 
 <body class="h-100">
+
+
   <!-- 很奇怪，非要 v-on:drop.prevent v-on:dragover.prevent 一起写才可以阻止默认拖入事件，本来想设在 body 上的，但是 vue 不允许在 body 标签上绑定操作 -->
   <div id="app" class="app" @drop.prevent @dragover.prevent>
     <div class="container pt-3 pb-5">
+      <!-- 警告区域 -->
+      <div class="">
+        <b-alert :show="showMultipleFileWarning" dismissible fade variant="warning">你选择了多个文件，请注意允许浏览器同时下载多个文件。</b-alert>
+      </div>
       <h3>清除Excel中的自定义样式</h3>
       <p>
-        该页面可以帮助你将Excel文件的所有自定义样式删除，你还需要将新生成的文件在Excel中打开并重新保存一次，来彻底清除残留。
+        这个页面可以帮助你将 Excel 文件的所有自定义样式删除。
       </p>
 
       <!-- 文件载入区域 -->
@@ -42,7 +47,7 @@
         <b-form-group label="拖入文件：" label-cols-sm="2">
           <b-card class="text-secondary" :class="{'bg-secondary ' : isDragIn, 'text-light' : isDragIn}">
             <div class="text-center" @drop="onGetFiles" @dragenter="onDragenter" @dragleave="onDragleave"
-              style="height: 100px; line-height: 100px; font-size: xx-large;">
+              style="height: 120px; line-height: 120px; font-size: x-large;">
               将文件拖入这里
             </div>
           </b-card>
@@ -53,20 +58,16 @@
 
       <!-- 处理记录区域 -->
       <div>
-        <b-form-group label="处理记录：" label-cols-sm="2">
-          <!-- 警告区域 -->
-          <b-alert :show="alert" :variant="alertType">
-            {{alertMsg}}
-          </b-alert>
-
-          <!-- 日志区域 -->
-          <b-card :header="logsHeader">
-            <b-list-group class="list-group m-1" v-for="(log, index) in logs" :key="index">
-              <b-list-group-item v-for="(vlog, vindex) in logs[index]" :key="vindex">{{ vlog }}</b-list-group-item>
-            </b-list-group>
+        <b-form-group label="处理进度：" label-cols-sm="2">
+          <!-- 进度条 -->
+          <b-progress :value="step" :max="totalStep" show-progress animated class="mt-2"></b-progress>
+          <!-- 状态 -->
+          <b-card no-body v-for="(log, index) in logs" :key="index" class="mt-2">
+            <div slot="header">{{ index }}</div>
+            <div class="p-3" :class="log.variant">
+              <b-badge variant="info" class="mr-3">{{ log.timePast }}</b-badge>{{ log.value }}
+            </div>
           </b-card>
-
-
 
 
         </b-form-group>
@@ -77,9 +78,9 @@
 
 
       <!-- 详细说明区域 -->
-      <div v-cloak>
-        <b-link v-b-toggle.collapse-1>点击查看详细说明 ▼</b-link>
-        <b-collapse id="collapse-1" class="mt-2">
+      <div v-cloak class="mt-5">
+        <b-link v-b-toggle.collapse-description>点击查看详细说明 ▼</b-link>
+        <b-collapse id="collapse-description">
           <b-card>
             <div>
               <b-img src="../old-version/sample.png" alt="示例图片" fluid-grow></b-img>
