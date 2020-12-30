@@ -3,9 +3,8 @@
 var app = new Vue({
     el: '#app',
     data: {
-        names: [],
         isDragIn: false,
-        startTime: null,
+        startTime: 0,
         logs: {},
         step: 0,
         totalStep: 7,
@@ -35,7 +34,6 @@ var app = new Vue({
             // 初始化
             this.startTime = new Date().getTime();
             this.logs = {};
-            this.alerts = {};
             this.step = 0;
             this.totalStep = (files.length) * 7;
             if (files.length > 1) {
@@ -49,14 +47,13 @@ var app = new Vue({
             }
         },
         log: function (key, value, variant) {
-            console.log(value)
-            if (!this.logs[key]) {
-                this.logs[key] = { step: 0 }
-            }
+            console.log(value);
             var timePast = '耗时 ' + (((new Date).getTime() - this.startTime) / 1000).toFixed(1) + 's';
-            this.logs[key].timePast = timePast;
-            this.logs[key].value = value;
-            this.logs[key].variant = variant;
+            this.logs[key] = {
+                timePast: timePast,
+                value: value,
+                variant: variant
+            }
             // 由于vue限制，对于 logs 深层数值的多次更新，视图只显示初始化之后的第一次更新，
             // 因此通过更新位于数据顶层的进度条，即 data 里的 step，使深层日志的每次更新也都能被立即显示出来。
             this.step += 1
@@ -113,7 +110,7 @@ async function handleFile(f) {
         app.log(f.name, '读取 workbook.xml 文件。');
         var workbookXML = await zip.file('xl/workbook.xml').async('string');
         // 清除自定义样式
-        app.log(f.name, '清除命名区域。')
+        app.log(f.name, '清除自定义名称。')
         workbookXML = workbookXML.replace(/<definedNames.*<\/definedNames>/, '');
         // 修改后的文件写入zip
         zip.file('xl/workbook.xml', workbookXML);
