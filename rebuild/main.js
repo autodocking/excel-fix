@@ -13,7 +13,7 @@ var app = new Vue({
         selected: ['styles', 'workbook'],
         options: [
             { text: '清除自定义样式', value: 'styles' },
-            { text: '清除命名区域', value: 'workbook' },
+            { text: '清除自定义名称', value: 'workbook' },
             { text: 'PNG→JPG 图片批量转换（未完成）', value: 'png' }
         ]
     },
