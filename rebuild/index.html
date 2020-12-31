@@ -21,10 +21,10 @@
 
   <!-- 很奇怪，非要 v-on:drop.prevent v-on:dragover.prevent 一起写才可以阻止默认拖入事件，本来想设在 body 上的，但是 vue 不允许在 body 标签上绑定操作 -->
   <div id="app" class="app" @drop.prevent @dragover.prevent>
-    <div class="container pt-3 pb-5">
+    <div class="container pt-4 pb-5">
 
       <!-- 警告区域 -->
-      <div class="">
+      <div>
         <b-alert :show="showMultipleFileWarning" dismissible fade variant="warning">你选择了多个文件，请注意允许浏览器
           <span class="text-danger">同时下载多个文件</span>。
         </b-alert>
@@ -35,7 +35,7 @@
       </p>
 
       <!-- 文件载入区域 -->
-      <div>
+      <div class="mt-5">
         <b-form-group label="选择文件：" label-for="file-select" label-cols-sm="2">
           <b-form-file class="text-center" multiple placeholder="未选择任何文件" drop-placeholder="拖入这里也可以" browse-text="浏览"
             id="file-select" @change="onGetFiles">
@@ -55,30 +55,81 @@
         </b-form-group>
       </div>
 
-
-      <!-- 选项区域 -->
-      <div>
-        <b-form-group label="处理选项：" v-slot="{ ariaDescribedby }" label-cols-sm="2">
-          <b-form-checkbox-group id="checkbox-group-1" v-model="selected" :options="options"
-            :aria-describedby="ariaDescribedby" name="flavour-1"></b-form-checkbox-group>
-        </b-form-group>
-      </div>
-
-
       <!-- 处理进度区域 -->
       <div>
         <b-form-group label="处理进度：" label-cols-sm="2">
           <!-- 进度条 -->
           <b-progress :value="step" :max="totalStep" show-progress animated class="mt-2"></b-progress>
-          <!-- 状态 -->
-          <b-card no-body v-for="(log, index) in logs" :key="index" class="mt-2">
-            <div slot="header">{{ index }}</div>
-            <div class="p-3" :class="log.variant">
-              <b-badge variant="info" class="mr-3">{{ log.timePast }}</b-badge>{{ log.value }}
+          <!-- 折叠菜单 -->
+          <div class="accordion mt-3" role="tablist">
+            <div v-for="(log, fileName) in logs" :key="fileName">
+              <b-card no-body class="mb-1">
+                <b-card-header header-tag="header" class="p-1" role="tab">
+                  <b-button block v-b-toggle="fileName" variant="light" class="text-left">
+                    <b-badge variant="info" class="mr-3">{{ log[log.length-1].timePast }}</b-badge>
+                    <b-badge variant="dark" class="mr-3 text-wrap">
+                      {{ '文件：' + decodeURIComponent(fileName) }}
+                    </b-badge>
+                    <!-- loading icon -->
+                    <b-spinner type="border" small v-if="!log[log.length-1].variant" class="mb-1"></b-spinner>
+                    <b-badge :variant="log[log.length-1].variant" class="mr-3 text-wrap">
+                      {{ log[log.length-1].value }}
+                    </b-badge>
+                  </b-button>
+                </b-card-header>
+                <b-collapse :id="fileName" accordion="my-accordion" role="tabpanel">
+                  <!-- 详细日志 -->
+                  <b-card-body class="p-0">
+                    <b-list-group flush>
+                      <div v-for="(innerLog, index) in log" :key="index">
+                        <b-list-group-item href="#" :variant="innerLog.variant">
+                          <b-badge variant="info" class="mr-3">{{ innerLog.timePast }}</b-badge>
+                          {{ innerLog.value }}
+                        </b-list-group-item>
+                      </div>
+                    </b-list-group>
+                  </b-card-body>
+                </b-collapse>
+              </b-card>
             </div>
+          </div>
+        </b-form-group>
+      </div>
+
+      <!-- 选项区域 -->
+      <div class="mt-5">
+        <b-form-group label="处理选项：" v-slot="{ ariaDescribedby }" label-cols-sm="2">
+          <b-form-checkbox-group v-model="selected" :state="selectAtLeastOne" :options="options"
+            :aria-describedby="ariaDescribedby" switches stacked>
+          </b-form-checkbox-group>
+          <b-form-invalid-feedback :state="selectAtLeastOne">请至少选择一个</b-form-invalid-feedback>
+
+          <!-- 图片处理选项 -->
+          <div v-if="selectedOptions.png" class="mt-3">
+            <b-card>
+              图片选项：
+              <b-input-group prepend="图片质量" :append="computedSetting.qualityTxt" class="mt-3">
+                <b-form-input type="range" min="0.1" step="0.01" max="1" v-model="setting.quality"></b-form-input>
+              </b-input-group>
+              <b-input-group prepend="图片尺寸" :append="computedSetting.sizeTxt" class="mt-3">
+                <b-form-input type="range" min="0.1" step="0.01" max="2" v-model="setting.size"></b-form-input>
+              </b-input-group>
+              <b-form-checkbox-group v-model="imagesOptionsSelected" :options="imagesOptions"
+                :aria-describedby="ariaDescribedby" stacked class="mt-3">
+              </b-form-checkbox-group>
+            </b-card>
+          </div>
+
+        </b-form-group>
+      </div>
+
+      <!-- 缩略图区域 -->
+      <div hidden>
+        <b-form-group label="图片区域：" label-cols-sm="2">
+          <b-card>
+
           </b-card>
         </b-form-group>
-
       </div>
 
       <!-- 详细说明区域 -->
@@ -99,10 +150,18 @@
                 7、在 Chrome 浏览器中可以同时处理多个文件，其他浏览器例如 IE 不支持同时下载多个文件，只能一个一个处理。
               </b-list-group-item>
               <b-list-group-item>
-                自动处理过程：<br>
-                1、使用 zip 解压文件。<br>
+                样式文件处理过程：<br>
+                1、使用 <a href="https://github.com/Stuk/jszip" target="_blank">JSZip</a> 解压文件。<br>
                 2、删除 xl 文件夹下 styles.xml 等文件中的 &lt;cellStyles&gt;...&lt;/cellStyles&gt; 等标签内的所有内容。<br>
-                3、重新用 zip 打包成 xlsx 文件，以【下载】的方式返回新文件。<br>
+                3、重新用 JSZip 打包成 xlsx 文件，最后以 <a href="https://github.com/eligrey/FileSaver.js" target="_blank">下载</a>
+                的方式返回新文件。<br>
+              </b-list-group-item>
+              <b-list-group-item>
+                图片处理过程：<br>
+                1、参考 <a href="https://github.com/renzhezhilu/webp2jpg-online" target="_blank">renzhezhilu</a>
+                的代码，先将图片转化成 base64 格式，然后放进 canvas 里，放进去时可以修改图片尺寸，输出时可以设置图片品质。<br>
+                2、因为 Excel 和 PPT 都可以识别错误扩展名的图片，所以暂时没有去修改图片的文件扩展名，修改文件名的话，需要同步修改其他文件中的文件路径，还不会搞。<br>
+                3、图片处理主要是针对桌面截图，桌面截图直接粘贴进 Excel 是 PNG 格式，几乎无法压缩大小，就需要转成 jpg 格式。
               </b-list-group-item>
               <b-list-group-item>
                 这里提供两个示例文件：<br>
@@ -118,6 +177,8 @@
               <b-list-group-item>
                 <b-icon icon="github"></b-icon>
                 <b-link href="https://github.com/autodocking/excel-fix" target="_blank">github</b-link>
+                <b-icon icon="bootstrap-fill" class="ml-3"></b-icon>
+                <b-link href="https://bootstrap-vue.org/docs" target="_blank">BootstrapVue</b-link>
               </b-list-group-item>
             </b-list-group>
           </b-card>
