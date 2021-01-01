@@ -10,21 +10,23 @@ var app = new Vue({
         logs: {},
         step: 0,
         showMultipleFileWarning: false,
-        selected: ['styles', 'workbook', 'png'],
+        selected: ['styles'],
         options: [
             { text: '清除自定义样式', value: 'styles' },
             { text: '清除自定义名称', value: 'workbook' },
-            { text: '压缩图片（支持处理 xlsx 和 pptx 文件）', value: 'png' },
-            { text: '将结果打包成一个 zip 文件（未完成）', value: 'zip', disabled: true }
+            { text: '压缩图片（还支持批量压缩 pptx、docx、zip 文件中的图片）', value: 'png' },
+            { text: '同时处理多个文件时，将结果打包成一个 zip 文件（未完成）', value: 'zip', disabled: true }
         ],
-        imagesOptionsSelected: [],
+        imagesOptionsSelected: ['png2Jpeg'],
         imagesOptions: [
-            { text: '可选择处理哪些格式的图片（未完成）', value: 'pngOnly', disabled: true },
-            { text: '显示出所有图片，由我来决定处理哪些（未完成）', value: 'showThumbnails', disabled: true },
-            { text: '同时修改扩展名（未完成）', value: 'changeExtensionName', disabled: true }
+            { text: '将 png 格式的图片转化为 jpg 格式', value: 'png2Jpeg' },
+            { text: '将 png 透明区域转化为白色，而不是黑色（未完成）', value: 'whiteBackground', disabled: true },
+            { text: '同时修改扩展名（未完成）', value: 'changeExtensionName', disabled: true },
+            { text: '显示出所有图片，由我来决定压缩哪些（未完成）', value: 'showThumbnails', disabled: true },
+            { text: '将所有图片转化为 webp 格式（待验证兼容性）', value: 'all2Webp', disabled: true }
         ],
         setting: {
-            quality: 0.9,
+            quality: 0.8,
             size: 1,
         }
     },
@@ -132,22 +134,28 @@ async function handleFile(f) {
     // 处理 styles.xml 文件
     if (app.selectedOptions.styles) {
         if (!(zip.file('xl/styles.xml'))) {
-            var msg = '错误：文档中没有 /xl/styles.xml。如果是旧版 xls 文件，请先在 Excel 中另存为 xlsx 格式。';
-            app.log(f.name, msg, 'danger');
-            app.step += 6;
-            return
+            if (app.selectedOptions.workbook || app.selectedOptions.png) {
+                var msg = '提示：文档中没有 /xl/styles.xml，跳过。';
+                app.log(f.name, msg, 'warning');
+                app.step += 1;
+            } else {
+                var msg = '错误：文档中没有 /xl/styles.xml。如果是旧版 xls 文件，请先在 Excel 中另存为 xlsx 格式。';
+                app.log(f.name, msg, 'danger');
+                app.step += 6;
+                return
+            }
+        } else {
+            app.log(f.name, '读取内部 /xl/styles.xml 文件。');
+            var stylesXML = await zip.file('xl/styles.xml').async('string');
+            // 清除自定义样式
+            app.log(f.name, '清除自定义样式。')
+            // 不建议清除 numFmts 会造成一些日期、数字格式丢失。
+            // stylesXML = stylesXML.replace(/<numFmts.*<\/numFmts>/, '');
+            stylesXML = stylesXML.replace(/<cellStyleXfs.*<\/cellStyleXfs>/, '');
+            stylesXML = stylesXML.replace(/<cellStyles.*<\/cellStyles>/, '');
+            // 修改后的文件写入zip
+            zip.file('xl/styles.xml', stylesXML);
         }
-        app.log(f.name, '读取内部 styles.xml 文件。');
-        var stylesXML = await zip.file('xl/styles.xml').async('string');
-        // 清除自定义样式
-        app.log(f.name, '清除自定义样式。')
-        // 而对于自定义样式，如果这个文件自定义样式多到需要批量清理，那么用户平时是不太可能点开样式表去找自己需要的样式的，也就是说，没有一个是有用的，全部删掉就好了。
-        // 不建议清除 numFmts 会造成一些日期、数字格式丢失。
-        // stylesXML = stylesXML.replace(/<numFmts.*<\/numFmts>/, '');
-        stylesXML = stylesXML.replace(/<cellStyleXfs.*<\/cellStyleXfs>/, '');
-        stylesXML = stylesXML.replace(/<cellStyles.*<\/cellStyles>/, '');
-        // 修改后的文件写入zip
-        zip.file('xl/styles.xml', stylesXML);
     } else {
         app.step += 2;
     }
@@ -155,18 +163,25 @@ async function handleFile(f) {
     // 处理 workbook.xml 文件
     if (app.selectedOptions.workbook) {
         if (!(zip.file('xl/workbook.xml'))) {
-            var msg = '错误：文档中没有 /xl/workbook.xml。如果是旧版 xls 文件，请先在 Excel 中另存为 xlsx 格式。';
-            app.log(f.name, msg, 'danger');
-            app.step += 4;
-            return
+            if (app.selectedOptions.png) {
+                var msg = '提示：文档中没有 /xl/workbook.xml，跳过。';
+                app.log(f.name, msg, 'warning');
+                app.step += 1;
+            } else {
+                var msg = '错误：文档中没有 /xl/workbook.xml。如果是旧版 xls 文件，请先在 Excel 中另存为 xlsx 格式。';
+                app.log(f.name, msg, 'danger');
+                app.step += 4;
+                return
+            }
+        } else {
+            app.log(f.name, '读取内部 /xl/workbook.xml 文件。');
+            var workbookXML = await zip.file('xl/workbook.xml').async('string');
+            // 清除自定义样式
+            app.log(f.name, '清除自定义名称。')
+            workbookXML = workbookXML.replace(/<definedNames.*<\/definedNames>/, '');
+            // 修改后的文件写入zip
+            zip.file('xl/workbook.xml', workbookXML);
         }
-        app.log(f.name, '读取内部 workbook.xml 文件。');
-        var workbookXML = await zip.file('xl/workbook.xml').async('string');
-        // 清除自定义样式
-        app.log(f.name, '清除自定义名称。')
-        workbookXML = workbookXML.replace(/<definedNames.*<\/definedNames>/, '');
-        // 修改后的文件写入zip
-        zip.file('xl/workbook.xml', workbookXML);
     } else {
         app.step += 2;
     }
@@ -176,7 +191,6 @@ async function handleFile(f) {
         // 获取图片列表
         var imagesNameList = [];
         var imagesList = [];
-        // relativePath.match(/\/media\//)
         zip.forEach(function (relativePath) {
             if (relativePath.match(/\.(png|jpg|jpeg|webp)$/)) {
                 imagesNameList.push(relativePath)
@@ -198,14 +212,14 @@ async function handleFile(f) {
         for (var i = 0; i < imagesNameList.length; i++) {
             imagesList[i] = await zip.file(imagesNameList[i]).async('blob');
             var base64 = await blob2Base64(imagesList[i]);
-            var newImage = await base642Blob(base64);
+            var newImage = await base642Blob(base64, imagesNameList[i]);
             // 如果转换后比原文件还大，就不替换。
             if (newImage.size < imagesList[i].size) {
                 app.log(f.name, '已替换 ' + imagesNameList[i] + '，' + (imagesList[i].size / 1024).toFixed(1) + 'KB → ' + (newImage.size / 1024).toFixed(1) + 'KB 。');
                 imagesList[i] = newImage;
                 app.step -= 1;
             } else {
-                app.log(f.name, imagesNameList[i] + ' 转换后比原文件还大，不进行替换。', 'warning');
+                app.log(f.name, imagesNameList[i] + ' ' + (imagesList[i].size / 1024).toFixed(1) + 'KB → ' + (newImage.size / 1024).toFixed(1) + 'KB' + ' 转换后比原文件还大，不进行替换。', 'warning');
                 app.step -= 1;
             }
             zip.file(imagesNameList[i], imagesList[i]);
@@ -243,27 +257,37 @@ function blob2Base64(blob) {
     })
 }
 // base64还原成图片  type = 'jpeg/png/webp'  size 尺寸   quality 压缩质量
-function base642Blob(base64, type = 'jpeg') {
+function base642Blob(base64, imageName) {
     return new Promise((resolve, reject) => {
-        let size = app.setting.size
-        let quality = app.setting.quality
+        let imageType = 'image/jpeg'
+
+        if (imageName.match(/\.webp$/)) {
+            imageType = 'image/webp'
+        }
+
+        if (!app.selectedImageOptions.png2Jpeg && imageName.match(/\.png$/)) {
+            imageType = 'image/png'
+        }
+
+        console.log(imageType)
+
+        let size = Number(app.setting.size)
+        let quality = Number(app.setting.quality)
         let img = new Image()
         img.src = base64
         img.onload = function () {
-            // let _canvas = document.getElementById("can")
-            // 不直接操作 DOM
+            // 只在内存中操作
             let _canvas = document.createElement('canvas')
-            //处理缩放
+            // 缩放
             let w = this.width * size
             let h = this.height * size
             _canvas.setAttribute("width", w)
             _canvas.setAttribute("height", h)
             _canvas.getContext("2d").drawImage(this, 0, 0, w, h)
-            // 转格式
-            // let base64_ok = _canvas.toDataURL(`image/${type}`, quality)
+            // 输出
             _canvas.toBlob(function (blob) {
                 resolve(blob)
-            }, `image/${type}`, quality)
+            }, imageType, quality)
         }
     })
 }
