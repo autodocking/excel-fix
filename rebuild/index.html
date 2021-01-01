@@ -113,7 +113,7 @@
                 </b-form-input>
               </b-input-group>
               <b-input-group prepend="图片尺寸" :append="computedSetting.sizeTxt" class="mt-3">
-                <b-form-input type="range" min="0.1" step="0.01" max="2" v-model="setting.size"></b-form-input>
+                <b-form-input type="range" min="0.1" step="0.01" max="1" v-model="setting.size"></b-form-input>
               </b-input-group>
               <b-form-checkbox-group v-model="imagesOptionsSelected" :options="imagesOptions"
                 :aria-describedby="ariaDescribedby" stacked class="mt-3">
