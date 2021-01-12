@@ -52,7 +52,7 @@ function sizingXlsx(evt) {
                 }
                 zip.file('xl/styles.xml').async('string').then(function (temp) {
                     // 清除自定义样式
-                    temp = temp.replace(/<numFmts.*<\/numFmts>/, '');
+                    // temp = temp.replace(/<numFmts.*<\/numFmts>/, '');
                     temp = temp.replace(/<cellStyleXfs.*<\/cellStyleXfs>/, '');
                     temp = temp.replace(/<cellStyles.*<\/cellStyles>/, '');
                     log('已清除自定义样式。');
